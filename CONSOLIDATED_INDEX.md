@@ -2,7 +2,7 @@
 
 | Document ID | Version | Date | Author |
 |-------------|---------|------|--------|
-| SS-HUB-001 | 1.0 | January 2026 | Obi Wan |
+| SS-HUB-002 | 1.0 | January 2026 | Obi Wan |
 
 ---
 
@@ -34,7 +34,8 @@
 | SS-DEV-006 | Troubleshooting Guide | iOS | docs/setup/Troubleshooting_Guide.md | Developers | 1.0 |
 | SS-DEV-007 | Quick Reference Card | iOS | docs/setup/Quick_Reference_Card.md | Developers | 1.0 |
 | SS-DOC-INDEX | iOS Documentation Index | iOS | docs/DOCUMENTATION_INDEX.md | All | 1.0 |
-| SS-HUB-001 | Documentation Hub | Hub | README.md | All | 1.0 |
+| SS-HUB-001 | Documentation Hub README | Hub | README.md | All | 1.0 |
+| SS-HUB-002 | Consolidated Index | Hub | CONSOLIDATED_INDEX.md | All | 1.0 |
 | — | Web Documentation Index | Web | docs/DOCUMENTATION_INDEX.md | All | — |
 | — | Web README | Web | docs/README-v0.2.3.md | Developers | 0.2.3 |
 | — | M1 Setup Guide | Web | docs/M1-SETUP.md | Developers | — |
@@ -294,7 +295,8 @@ Web: User Guide Web (Section 1-2, then explore)
 | SS-DEV-006 | Troubleshooting Guide | 1.0 | Jan 2026 |
 | SS-DEV-007 | Quick Reference Card | 1.0 | Jan 2026 |
 | SS-DOC-INDEX | iOS Documentation Index | 1.0 | Jan 2026 |
-| SS-HUB-001 | Documentation Hub | 1.0 | Jan 2026 |
+| SS-HUB-001 | Documentation Hub README | 1.0 | Jan 2026 |
+| SS-HUB-002 | Consolidated Index | 1.0 | Jan 2026 |
 
 ### Application Versions
 
@@ -326,4 +328,4 @@ Web: User Guide Web (Section 1-2, then explore)
 
 ---
 
-*Sommelier Spark Consolidated Documentation Index v1.0 — January 2026*
+*SS-HUB-002 — Sommelier Spark Consolidated Documentation Index v1.0 — January 2026*
