@@ -6,6 +6,39 @@ Version history for documentation across all Sommelier Spark projects.
 
 ## January 2026
 
+### WS2 Release — iOS Parity for Web App
+
+**Date:** 3 January 2026
+**Project:** sommelier_spark
+**Version:** 2.0.0
+
+Completed WS2 (Work Stream 2) sync to achieve iOS v2.0.0 feature parity for the web application.
+
+**Features Implemented:**
+- Tier-based progress tracking (Bronze/Silver/Gold)
+- Quiz terminology aligned with iOS (Bronze/Silver/Gold, not Level 1/2/3)
+- Pass thresholds: Bronze 70%, Silver 80%, Gold 90%
+- Demo Mode (accelerate to Bronze/Silver)
+- Granular reset (by category: wines, modules, quizzes, scenarios)
+- Tier progress banners on all pages
+- Tier progress cards on dashboard
+- Bug fixes and parity alignment
+
+**Documentation Updated:**
+- User Guide Web (v1.0 → v2.0)
+- Documentation Index updated
+- WS2 documentation suite created (4 documents)
+
+**WS2 Documentation:**
+| Document | Description |
+|----------|-------------|
+| Feature Gap Analysis | iOS v2.0.0 vs Web comparison |
+| Sync Prioritization | Task prioritization matrix |
+| Verification Report | Testing and QA results (426/429 tests pass) |
+| Completion Summary | Implementation summary |
+
+---
+
 ### WS1 Final Documentation Review (SS-REV-002)
 
 **Date:** 3 January 2026
@@ -74,16 +107,17 @@ Created comprehensive administrator guide covering:
 
 **Date:** 3 January 2026
 **Project:** sommelier_spark
-**Version:** 1.0
+**Version:** 1.0 (updated to 2.0 with WS2 release)
 
 Created complete user guide for web application covering:
 - Getting started and logging in
-- Dashboard navigation
+- Dashboard navigation (with tier progress cards in v2.0)
 - Wine Library with progressive disclosure
 - Learning modules and lessons
-- 3-tier quiz system (Level 1/2/3)
+- 3-tier quiz system (Bronze/Silver/Gold in v2.0)
 - Scenarios (Bronze/Silver/Gold)
 - Certification journey
+- Demo Mode and granular reset (v2.0)
 - FAQs and glossary
 
 **Formats:** .md, .docx, .pdf, .html
@@ -201,9 +235,9 @@ Created comprehensive documentation index for iOS project with:
 | Project | Count |
 |---------|-------|
 | sommelier_spark_ios | 35+ |
-| sommelier_spark | 10+ |
+| sommelier_spark | 14+ (includes WS2 docs) |
 | sommelier-spark-docs | 7 |
-| **Total** | **52+** |
+| **Total** | **56+** |
 
 ### Documents by Type
 

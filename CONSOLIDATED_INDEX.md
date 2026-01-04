@@ -24,7 +24,7 @@
 | Doc ID | Title | Project | Path | Audience | Version |
 |--------|-------|---------|------|----------|---------|
 | SS-USR-001 | User Guide (iOS) | iOS | docs/user/User_Guide_iOS.md | End Users | 1.0 |
-| SS-USR-002 | User Guide (Web) | Web | docs/user/User_Guide_Web.md | End Users | 1.0 |
+| SS-USR-002 | User Guide (Web) | Web | docs/user/User_Guide_Web.md | End Users | 2.0 |
 | SS-ADM-001 | Administrator Guide | Web | docs/admin/Administrator_Guide.md | Administrators | 1.0 |
 | SS-DEV-001 | Developer Setup (Apple Silicon) | iOS | docs/setup/Developer_Setup_Guide_Apple_Silicon.md | Developers | 1.0 |
 | SS-DEV-002 | Developer Setup (Intel) | iOS | docs/setup/Developer_Setup_Guide_Intel.md | Developers | 1.0 |
@@ -110,12 +110,13 @@
 
 | Category | Count | Key Documents |
 |----------|-------|---------------|
-| User Docs | 1 | User Guide Web |
+| User Docs | 1 | User Guide Web (v2.0) |
 | Admin Docs | 3 | Administrator Guide, Adding Org Content, Wine Import |
 | Developer Docs | 2 | README, M1 Setup |
 | Technical | 1 | Cross-Platform Requirements |
+| WS2 Docs | 4 | Feature Gap Analysis, Sync Prioritization, Verification Report, Completion Summary |
 | Index | 1 | Documentation Index |
-| **Total** | **8+** | |
+| **Total** | **12+** | |
 
 ### Documentation Hub (`sommelier-spark-docs`)
 
@@ -303,12 +304,13 @@ Web: User Guide Web (Section 1-2, then explore)
 | Application | Current Version | Docs Updated |
 |-------------|-----------------|--------------|
 | Sommelier Spark iOS | 2.0.0 | Jan 2026 |
-| Sommelier Spark Web | 0.2.3 | Jan 2026 |
+| Sommelier Spark Web | 2.0.0 | Jan 2026 |
 
 ### Documentation History
 
 | Date | Changes |
 |------|---------|
+| Jan 2026 | **WS2 Release:** Web v2.0.0, iOS parity achieved, User Guide updated to v2.0, WS2 documentation suite (4 docs) |
 | Jan 2026 | Web User Guide, Administrator Guide, Documentation Hub created |
 | Jan 2026 | iOS Developer docs suite (7 documents) |
 | Jan 2026 | iOS User Guide created |
