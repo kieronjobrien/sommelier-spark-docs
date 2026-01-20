@@ -128,7 +128,27 @@
 | Shared | 3 | Glossary, Style Guide, Changelog |
 | Guides | 1 | Documentation Map |
 | Meta | 1 | Contributing |
-| **Total** | **7** | |
+| **Total** | **7** |
+
+### WS3.0 Specifications (`specifications/ws3.0`)
+
+**Location:** `~/Projects/sommelier_spark_docs/specifications/ws3.0/`
+
+| Sprint | Doc ID | Document | Status |
+|--------|--------|----------|--------|
+| S1 | SS-WS3.0-CDM | Content Domain Model | Final |
+| S1 | SS-WS3.0-CLS | Content Lifecycle Specification | Final |
+| S1 | SS-WS3.0-ORG | Organization Model | Final |
+| S1 | SS-WS3.0-S1R | Sprint 1 Review Report | Final |
+| S2 | SS-WS3.0-CMS-FR | CMS Functional Requirements | Final |
+| S2 | SS-WS3.0-CMS-WF | CMS Workflow Specification | Final |
+| S2 | SS-WS3.0-CMS-IE | Content Import/Export Specification | Final |
+| S2 | SS-WS3.0-S2R | Sprint 2 Review Report | Final |
+| S3 | SS-WS3.0-LE-REQ | Learning Engine Requirements | Final |
+| S3 | SS-WS3.0-LE-CGR | Content Generation Rules | Final |
+| S3 | SS-WS3.0-LE-CLM | Content-to-Learning Mapping | Final |
+| S3 | SS-WS3.0-SUM | WS3.0 Completion Summary | Final |
+| **Total** | | **12 documents** | |
 
 ---
 
@@ -326,7 +346,8 @@ Web: User Guide Web (Section 1-2, then explore)
 | iOS | 35 | 10 | 2 | 1 | 48 |
 | Web | 10 | 3 | 2 | 2 | 17 |
 | Hub | 7 | 0 | 0 | 0 | 7 |
-| **Total** | **52** | **13** | **4** | **3** | **72** |
+| WS3.0 Specs | 12 | 12 | 0 | 0 | 24 |
+| **Total** | **64** | **25** | **4** | **3** | **96** |
 
 ---
 

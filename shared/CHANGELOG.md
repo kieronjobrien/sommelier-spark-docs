@@ -6,6 +6,49 @@ Version history for documentation across all Sommelier Spark projects.
 
 ## January 2026
 
+### WS3.0 Complete — Core Domain Requirements
+
+**Date:** 20 January 2026
+**Project:** sommelier-spark-docs
+**Tag:** ws3.0-complete
+
+Completed WS3.0 (Work Stream 3.0) Core Domain Requirements specification suite.
+
+**Sprints Completed:**
+| Sprint | Focus | Documents |
+|--------|-------|-----------|
+| Sprint 1 | Content & Organization Domain | 4 |
+| Sprint 2 | CMS Requirements | 4 |
+| Sprint 3 | Learning Engine Requirements | 4 |
+
+**Key Deliverables:**
+- 271 total requirements (159 CMS + 112 Learning Engine)
+- 47 Mermaid diagrams
+- 18 question generation templates
+- 12 scenario generation templates
+- 18 wine attribute-to-question mappings
+- 4 import/export schemas
+
+**WS3.0 Documents:**
+| Doc ID | Document |
+|--------|----------|
+| SS-WS3.0-CDM | Content Domain Model |
+| SS-WS3.0-CLS | Content Lifecycle Specification |
+| SS-WS3.0-ORG | Organization Model |
+| SS-WS3.0-S1R | Sprint 1 Review Report |
+| SS-WS3.0-CMS-FR | CMS Functional Requirements |
+| SS-WS3.0-CMS-WF | CMS Workflow Specification |
+| SS-WS3.0-CMS-IE | Content Import/Export Specification |
+| SS-WS3.0-S2R | Sprint 2 Review Report |
+| SS-WS3.0-LE-REQ | Learning Engine Requirements |
+| SS-WS3.0-LE-CGR | Content Generation Rules |
+| SS-WS3.0-LE-CLM | Content-to-Learning Mapping |
+| SS-WS3.0-SUM | WS3.0 Completion Summary |
+
+**Result:** PASS — Foundation complete for WS3 Specification Suite.
+
+---
+
 ### WS2 Release — iOS Parity for Web App
 
 **Date:** 3 January 2026
@@ -237,7 +280,8 @@ Created comprehensive documentation index for iOS project with:
 | sommelier_spark_ios | 35+ |
 | sommelier_spark | 14+ (includes WS2 docs) |
 | sommelier-spark-docs | 7 |
-| **Total** | **56+** |
+| WS3.0 Specifications | 12 |
+| **Total** | **68+** |
 
 ### Documents by Type
 
