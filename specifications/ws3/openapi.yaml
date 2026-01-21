@@ -1,0 +1,3862 @@
+openapi: 3.0.3
+info:
+  title: Sommelier Spark API
+  description: |
+    REST API for the Sommelier Spark wine training platform.
+
+    ## Authentication
+    All endpoints (except auth endpoints) require a Bearer JWT token.
+
+    ## Rate Limiting
+    - Standard: 100 requests/minute per user
+    - Enterprise: 1000 requests/minute per user
+
+    ## Versioning
+    API version is specified in the URL path (`/api/v1/`).
+  version: 1.0.0
+  contact:
+    name: Sommelier Spark API Support
+    email: api-support@sommelierspark.com
+  license:
+    name: Proprietary
+    url: https://sommelierspark.com/terms
+
+servers:
+  - url: https://api.sommelierspark.com/api/v1
+    description: Production
+  - url: https://api-staging.sommelierspark.com/api/v1
+    description: Staging
+  - url: http://localhost:3000/api/v1
+    description: Development
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User management operations
+  - name: Organisations
+    description: Organisation management
+  - name: Wines
+    description: Wine content management
+  - name: Modules
+    description: Learning module management
+  - name: Quizzes
+    description: Quiz management and attempts
+  - name: Scenarios
+    description: Interactive scenario management
+  - name: Progress
+    description: User progress tracking
+  - name: Imports
+    description: Bulk data import operations
+  - name: Reports
+    description: Analytics and reporting
+  - name: Curriculum
+    description: Curriculum generation
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ============ Authentication ============
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: Authenticate with email and password to receive access and refresh tokens.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: SecurePassword123!
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '403':
+          $ref: '#/components/responses/AccountLocked'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User logout
+      description: Invalidate current session and blacklist tokens.
+      operationId: logout
+      responses:
+        '204':
+          description: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Exchange a valid refresh token for a new access token.
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          $ref: '#/components/responses/InvalidToken'
+
+  /auth/forgot-password:
+    post:
+      tags: [Authentication]
+      summary: Request password reset
+      description: Send password reset email to user.
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Reset email sent (if account exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /auth/reset-password:
+    post:
+      tags: [Authentication]
+      summary: Reset password
+      description: Reset password using token from email.
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ============ Users ============
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: List all users in the organisation.
+      operationId: listUsers
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserStatus'
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserRole'
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or email
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Users]
+      summary: Create user
+      description: Create a new user in the organisation.
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user
+      description: Get the authenticated user's profile.
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/invite:
+    post:
+      tags: [Users]
+      summary: Invite user
+      description: Send invitation email to a new user.
+      operationId: inviteUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteUserRequest'
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /users/{userId}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      description: Get a specific user's details.
+      operationId: getUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Users]
+      summary: Update user
+      description: Update user details.
+      operationId: updateUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Users]
+      summary: Delete user
+      description: Remove user from organisation.
+      operationId: deleteUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '204':
+          description: User deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{userId}/activate:
+    post:
+      tags: [Users]
+      summary: Activate user
+      description: Activate an invited user account.
+      operationId: activateUser
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateUserRequest'
+      responses:
+        '200':
+          description: User activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /users/{userId}/suspend:
+    post:
+      tags: [Users]
+      summary: Suspend user
+      description: Suspend a user account.
+      operationId: suspendUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/{userId}/reactivate:
+    post:
+      tags: [Users]
+      summary: Reactivate user
+      description: Reactivate a suspended user account.
+      operationId: reactivateUser
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User reactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============ Organisations ============
+  /organisations/current:
+    get:
+      tags: [Organisations]
+      summary: Get current organisation
+      description: Get the authenticated user's organisation.
+      operationId: getCurrentOrganisation
+      responses:
+        '200':
+          description: Organisation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganisationResponse'
+
+    put:
+      tags: [Organisations]
+      summary: Update organisation
+      description: Update organisation details.
+      operationId: updateOrganisation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrganisationRequest'
+      responses:
+        '200':
+          description: Organisation updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganisationResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /organisations/current/settings:
+    put:
+      tags: [Organisations]
+      summary: Update organisation settings
+      description: Update organisation settings.
+      operationId: updateOrganisationSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrganisationSettings'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OrganisationSettings'
+
+  /organisations/current/branding:
+    put:
+      tags: [Organisations]
+      summary: Update organisation branding
+      description: Update organisation branding (logo, colors).
+      operationId: updateOrganisationBranding
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                logo:
+                  type: string
+                  format: binary
+                primaryColor:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                secondaryColor:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+      responses:
+        '200':
+          description: Branding updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Branding'
+        '403':
+          $ref: '#/components/responses/FeatureNotAvailable'
+
+  # ============ Wines ============
+  /wines:
+    get:
+      tags: [Wines]
+      summary: List wines
+      description: List wines in the organisation.
+      operationId: listWines
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentStatus'
+        - name: wineType
+          in: query
+          schema:
+            $ref: '#/components/schemas/WineType'
+        - name: region
+          in: query
+          schema:
+            type: string
+        - name: country
+          in: query
+          schema:
+            type: string
+        - name: priceTier
+          in: query
+          schema:
+            $ref: '#/components/schemas/PriceTier'
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of wines
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineListResponse'
+
+    post:
+      tags: [Wines]
+      summary: Create wine
+      description: Create a new wine entry.
+      operationId: createWine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWineRequest'
+            example:
+              name: Cloudy Bay Sauvignon Blanc 2024
+              producer: Cloudy Bay
+              vintage: 2024
+              region: Marlborough
+              country: NZ
+              wineType: white
+              grapeVarieties: [Sauvignon Blanc]
+              priceTier: premium
+              price: 28.00
+      responses:
+        '201':
+          description: Wine created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /wines/{wineId}:
+    get:
+      tags: [Wines]
+      summary: Get wine by ID
+      description: Get a specific wine's details.
+      operationId: getWine
+      parameters:
+        - $ref: '#/components/parameters/WineIdParam'
+      responses:
+        '200':
+          description: Wine details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Wines]
+      summary: Update wine
+      description: Update wine details.
+      operationId: updateWine
+      parameters:
+        - $ref: '#/components/parameters/WineIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWineRequest'
+      responses:
+        '200':
+          description: Wine updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags: [Wines]
+      summary: Delete wine
+      description: Soft delete a wine.
+      operationId: deleteWine
+      parameters:
+        - $ref: '#/components/parameters/WineIdParam'
+      responses:
+        '204':
+          description: Wine deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /wines/{wineId}/submit:
+    post:
+      tags: [Wines]
+      summary: Submit wine for review
+      description: Submit a draft wine for review.
+      operationId: submitWine
+      parameters:
+        - $ref: '#/components/parameters/WineIdParam'
+      responses:
+        '200':
+          description: Wine submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineResponse'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /wines/{wineId}/approve:
+    post:
+      tags: [Wines]
+      summary: Approve wine
+      description: Approve a wine under review.
+      operationId: approveWine
+      parameters:
+        - $ref: '#/components/parameters/WineIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                feedback:
+                  type: string
+      responses:
+        '200':
+          description: Wine approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineResponse'
+
+  /wines/{wineId}/reject:
+    post:
+      tags: [Wines]
+      summary: Reject wine
+      description: Reject a wine and return to draft.
+      operationId: rejectWine
+      parameters:
+        - $ref: '#/components/parameters/WineIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [feedback]
+              properties:
+                feedback:
+                  type: string
+      responses:
+        '200':
+          description: Wine rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineResponse'
+
+  /wines/{wineId}/publish:
+    post:
+      tags: [Wines]
+      summary: Publish wine
+      description: Publish an approved wine.
+      operationId: publishWine
+      parameters:
+        - $ref: '#/components/parameters/WineIdParam'
+      responses:
+        '200':
+          description: Wine published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineResponse'
+
+  /wines/{wineId}/archive:
+    post:
+      tags: [Wines]
+      summary: Archive wine
+      description: Archive a published wine.
+      operationId: archiveWine
+      parameters:
+        - $ref: '#/components/parameters/WineIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Wine archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WineResponse'
+
+  # ============ Modules ============
+  /modules:
+    get:
+      tags: [Modules]
+      summary: List modules
+      description: List learning modules.
+      operationId: listModules
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentStatus'
+        - name: tier
+          in: query
+          schema:
+            $ref: '#/components/schemas/Tier'
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of modules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleListResponse'
+
+    post:
+      tags: [Modules]
+      summary: Create module
+      description: Create a new learning module.
+      operationId: createModule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateModuleRequest'
+      responses:
+        '201':
+          description: Module created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleResponse'
+
+  /modules/{moduleId}:
+    get:
+      tags: [Modules]
+      summary: Get module by ID
+      description: Get a specific module with lessons.
+      operationId: getModule
+      parameters:
+        - $ref: '#/components/parameters/ModuleIdParam'
+      responses:
+        '200':
+          description: Module details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Modules]
+      summary: Update module
+      description: Update module details.
+      operationId: updateModule
+      parameters:
+        - $ref: '#/components/parameters/ModuleIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateModuleRequest'
+      responses:
+        '200':
+          description: Module updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleResponse'
+
+    delete:
+      tags: [Modules]
+      summary: Delete module
+      description: Delete a module.
+      operationId: deleteModule
+      parameters:
+        - $ref: '#/components/parameters/ModuleIdParam'
+      responses:
+        '204':
+          description: Module deleted
+
+  /modules/{moduleId}/lessons:
+    get:
+      tags: [Modules]
+      summary: List module lessons
+      description: List lessons in a module.
+      operationId: listModuleLessons
+      parameters:
+        - $ref: '#/components/parameters/ModuleIdParam'
+      responses:
+        '200':
+          description: List of lessons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonListResponse'
+
+    post:
+      tags: [Modules]
+      summary: Create lesson
+      description: Add a lesson to a module.
+      operationId: createLesson
+      parameters:
+        - $ref: '#/components/parameters/ModuleIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLessonRequest'
+      responses:
+        '201':
+          description: Lesson created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonResponse'
+
+  /modules/{moduleId}/lessons/{lessonId}:
+    put:
+      tags: [Modules]
+      summary: Update lesson
+      description: Update lesson content.
+      operationId: updateLesson
+      parameters:
+        - $ref: '#/components/parameters/ModuleIdParam'
+        - $ref: '#/components/parameters/LessonIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLessonRequest'
+      responses:
+        '200':
+          description: Lesson updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonResponse'
+
+    delete:
+      tags: [Modules]
+      summary: Delete lesson
+      description: Delete a lesson from a module.
+      operationId: deleteLesson
+      parameters:
+        - $ref: '#/components/parameters/ModuleIdParam'
+        - $ref: '#/components/parameters/LessonIdParam'
+      responses:
+        '204':
+          description: Lesson deleted
+
+  /modules/{moduleId}/lessons/reorder:
+    put:
+      tags: [Modules]
+      summary: Reorder lessons
+      description: Reorder lessons within a module.
+      operationId: reorderLessons
+      parameters:
+        - $ref: '#/components/parameters/ModuleIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lessonOrder]
+              properties:
+                lessonOrder:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Lessons reordered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonListResponse'
+
+  # ============ Quizzes ============
+  /quizzes:
+    get:
+      tags: [Quizzes]
+      summary: List quizzes
+      description: List available quizzes.
+      operationId: listQuizzes
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: tier
+          in: query
+          schema:
+            $ref: '#/components/schemas/Tier'
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentStatus'
+      responses:
+        '200':
+          description: List of quizzes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizListResponse'
+
+    post:
+      tags: [Quizzes]
+      summary: Create quiz
+      description: Create a new quiz.
+      operationId: createQuiz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizRequest'
+      responses:
+        '201':
+          description: Quiz created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizResponse'
+
+  /quizzes/{quizId}:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz by ID
+      description: Get quiz details.
+      operationId: getQuiz
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+      responses:
+        '200':
+          description: Quiz details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Quizzes]
+      summary: Update quiz
+      description: Update quiz details.
+      operationId: updateQuiz
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQuizRequest'
+      responses:
+        '200':
+          description: Quiz updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizResponse'
+
+    delete:
+      tags: [Quizzes]
+      summary: Delete quiz
+      description: Delete a quiz.
+      operationId: deleteQuiz
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+      responses:
+        '204':
+          description: Quiz deleted
+
+  /quizzes/{quizId}/preview:
+    get:
+      tags: [Quizzes]
+      summary: Preview quiz
+      description: Preview quiz with answers (for authors).
+      operationId: previewQuiz
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+      responses:
+        '200':
+          description: Quiz preview with answers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizPreviewResponse'
+
+  /quizzes/{quizId}/questions:
+    post:
+      tags: [Quizzes]
+      summary: Add question
+      description: Add a question to a quiz.
+      operationId: createQuestion
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuestionRequest'
+      responses:
+        '201':
+          description: Question created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionResponse'
+
+  /quizzes/{quizId}/questions/{questionId}:
+    put:
+      tags: [Quizzes]
+      summary: Update question
+      description: Update a quiz question.
+      operationId: updateQuestion
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+        - $ref: '#/components/parameters/QuestionIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQuestionRequest'
+      responses:
+        '200':
+          description: Question updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionResponse'
+
+    delete:
+      tags: [Quizzes]
+      summary: Delete question
+      description: Delete a question from a quiz.
+      operationId: deleteQuestion
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+        - $ref: '#/components/parameters/QuestionIdParam'
+      responses:
+        '204':
+          description: Question deleted
+
+  /quizzes/{quizId}/attempts:
+    post:
+      tags: [Quizzes]
+      summary: Start quiz attempt
+      description: Start a new quiz attempt.
+      operationId: startQuizAttempt
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+      responses:
+        '201':
+          description: Attempt started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAttemptResponse'
+        '403':
+          description: Quiz locked or on cooldown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /quizzes/{quizId}/attempts/{attemptId}:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz attempt
+      description: Get quiz attempt details.
+      operationId: getQuizAttempt
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+        - $ref: '#/components/parameters/AttemptIdParam'
+      responses:
+        '200':
+          description: Attempt details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAttemptResponse'
+
+  /quizzes/{quizId}/attempts/{attemptId}/submit:
+    post:
+      tags: [Quizzes]
+      summary: Submit quiz attempt
+      description: Submit answers and complete quiz attempt.
+      operationId: submitQuizAttempt
+      parameters:
+        - $ref: '#/components/parameters/QuizIdParam'
+        - $ref: '#/components/parameters/AttemptIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitQuizRequest'
+      responses:
+        '200':
+          description: Quiz submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizResultResponse'
+
+  # ============ Scenarios ============
+  /scenarios:
+    get:
+      tags: [Scenarios]
+      summary: List scenarios
+      description: List available scenarios.
+      operationId: listScenarios
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: difficulty
+          in: query
+          schema:
+            $ref: '#/components/schemas/Tier'
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/ScenarioCategory'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentStatus'
+      responses:
+        '200':
+          description: List of scenarios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioListResponse'
+
+    post:
+      tags: [Scenarios]
+      summary: Create scenario
+      description: Create a new scenario.
+      operationId: createScenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScenarioRequest'
+      responses:
+        '201':
+          description: Scenario created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioResponse'
+
+  /scenarios/{scenarioId}:
+    get:
+      tags: [Scenarios]
+      summary: Get scenario by ID
+      description: Get scenario details.
+      operationId: getScenario
+      parameters:
+        - $ref: '#/components/parameters/ScenarioIdParam'
+      responses:
+        '200':
+          description: Scenario details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Scenarios]
+      summary: Update scenario
+      description: Update scenario details.
+      operationId: updateScenario
+      parameters:
+        - $ref: '#/components/parameters/ScenarioIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScenarioRequest'
+      responses:
+        '200':
+          description: Scenario updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioResponse'
+
+    delete:
+      tags: [Scenarios]
+      summary: Delete scenario
+      description: Delete a scenario.
+      operationId: deleteScenario
+      parameters:
+        - $ref: '#/components/parameters/ScenarioIdParam'
+      responses:
+        '204':
+          description: Scenario deleted
+
+  /scenarios/{scenarioId}/preview:
+    get:
+      tags: [Scenarios]
+      summary: Preview scenario
+      description: Preview scenario with all steps and answers (for authors).
+      operationId: previewScenario
+      parameters:
+        - $ref: '#/components/parameters/ScenarioIdParam'
+      responses:
+        '200':
+          description: Scenario preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioPreviewResponse'
+
+  /scenarios/{scenarioId}/attempts:
+    post:
+      tags: [Scenarios]
+      summary: Start scenario attempt
+      description: Start a new scenario attempt.
+      operationId: startScenarioAttempt
+      parameters:
+        - $ref: '#/components/parameters/ScenarioIdParam'
+      responses:
+        '201':
+          description: Attempt started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioAttemptResponse'
+
+  /scenarios/{scenarioId}/attempts/{attemptId}:
+    get:
+      tags: [Scenarios]
+      summary: Get scenario attempt
+      description: Get scenario attempt status.
+      operationId: getScenarioAttempt
+      parameters:
+        - $ref: '#/components/parameters/ScenarioIdParam'
+        - $ref: '#/components/parameters/AttemptIdParam'
+      responses:
+        '200':
+          description: Attempt details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioAttemptResponse'
+
+  /scenarios/{scenarioId}/attempts/{attemptId}/choices:
+    post:
+      tags: [Scenarios]
+      summary: Submit scenario choice
+      description: Submit a choice in a scenario.
+      operationId: submitScenarioChoice
+      parameters:
+        - $ref: '#/components/parameters/ScenarioIdParam'
+        - $ref: '#/components/parameters/AttemptIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [choiceId]
+              properties:
+                choiceId:
+                  type: string
+      responses:
+        '200':
+          description: Choice submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioChoiceResponse'
+
+  # ============ Progress ============
+  /progress:
+    get:
+      tags: [Progress]
+      summary: Get my progress
+      description: Get current user's learning progress.
+      operationId: getMyProgress
+      responses:
+        '200':
+          description: User progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressResponse'
+
+  /progress/summary:
+    get:
+      tags: [Progress]
+      summary: Get progress summary
+      description: Get progress summary for dashboard.
+      operationId: getProgressSummary
+      responses:
+        '200':
+          description: Progress summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressSummaryResponse'
+
+  /progress/users/{userId}:
+    get:
+      tags: [Progress]
+      summary: Get user progress
+      description: Get a specific user's progress (for managers).
+      operationId: getUserProgress
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: User progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /progress/lessons/{lessonId}/complete:
+    post:
+      tags: [Progress]
+      summary: Complete lesson
+      description: Mark a lesson as complete.
+      operationId: completeLesson
+      parameters:
+        - $ref: '#/components/parameters/LessonIdParam'
+      responses:
+        '200':
+          description: Lesson completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonCompletionResponse'
+
+  /certifications:
+    get:
+      tags: [Progress]
+      summary: Get certifications
+      description: Get user's earned certifications.
+      operationId: getCertifications
+      responses:
+        '200':
+          description: List of certifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationListResponse'
+
+  # ============ Imports ============
+  /imports/wines:
+    post:
+      tags: [Imports]
+      summary: Upload wine import
+      description: Upload a CSV file for wine import.
+      operationId: uploadWineImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                duplicateHandling:
+                  type: string
+                  enum: [skip, update, error]
+                  default: skip
+      responses:
+        '201':
+          description: Import started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /imports:
+    get:
+      tags: [Imports]
+      summary: List imports
+      description: List import history.
+      operationId: listImports
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: List of imports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportListResponse'
+
+  /imports/{importId}:
+    get:
+      tags: [Imports]
+      summary: Get import status
+      description: Get import status and progress.
+      operationId: getImport
+      parameters:
+        - $ref: '#/components/parameters/ImportIdParam'
+      responses:
+        '200':
+          description: Import status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /imports/{importId}/preview:
+    get:
+      tags: [Imports]
+      summary: Preview import
+      description: Preview import data before confirmation.
+      operationId: previewImport
+      parameters:
+        - $ref: '#/components/parameters/ImportIdParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Import preview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportPreviewResponse'
+
+  /imports/{importId}/errors:
+    get:
+      tags: [Imports]
+      summary: Get import errors
+      description: Get list of import validation errors.
+      operationId: getImportErrors
+      parameters:
+        - $ref: '#/components/parameters/ImportIdParam'
+      responses:
+        '200':
+          description: Import errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportErrorsResponse'
+
+  /imports/{importId}/confirm:
+    post:
+      tags: [Imports]
+      summary: Confirm import
+      description: Confirm and execute the import.
+      operationId: confirmImport
+      parameters:
+        - $ref: '#/components/parameters/ImportIdParam'
+      responses:
+        '200':
+          description: Import confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+
+  /imports/{importId}/cancel:
+    post:
+      tags: [Imports]
+      summary: Cancel import
+      description: Cancel a pending import.
+      operationId: cancelImport
+      parameters:
+        - $ref: '#/components/parameters/ImportIdParam'
+      responses:
+        '200':
+          description: Import cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+
+  /templates/wines.csv:
+    get:
+      tags: [Imports]
+      summary: Download wine template
+      description: Download CSV template for wine imports.
+      operationId: downloadWineTemplate
+      responses:
+        '200':
+          description: CSV template file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
+  # ============ Reports ============
+  /reports/individual/{userId}:
+    get:
+      tags: [Reports]
+      summary: Get individual report
+      description: Get detailed report for a specific user.
+      operationId: getIndividualReport
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+      responses:
+        '200':
+          description: Individual report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualReportResponse'
+
+  /reports/team:
+    get:
+      tags: [Reports]
+      summary: Get team report
+      description: Get team progress report.
+      operationId: getTeamReport
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+        - name: department
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Team report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamReportResponse'
+
+  /reports/organisation:
+    get:
+      tags: [Reports]
+      summary: Get organisation report
+      description: Get organisation-wide report.
+      operationId: getOrganisationReport
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+      responses:
+        '200':
+          description: Organisation report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganisationReportResponse'
+
+  /reports/content:
+    get:
+      tags: [Reports]
+      summary: Get content report
+      description: Get content analytics report.
+      operationId: getContentReport
+      responses:
+        '200':
+          description: Content report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentReportResponse'
+
+  /reports/export:
+    post:
+      tags: [Reports]
+      summary: Export report
+      description: Export a report to CSV or PDF.
+      operationId: exportReport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportReportRequest'
+      responses:
+        '200':
+          description: Export started or completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportReportResponse'
+
+  # ============ Curriculum ============
+  /curriculum/generate:
+    post:
+      tags: [Curriculum]
+      summary: Generate curriculum
+      description: Trigger curriculum generation from wine list.
+      operationId: generateCurriculum
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateCurriculumRequest'
+      responses:
+        '202':
+          description: Generation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationJobResponse'
+
+  /curriculum/status:
+    get:
+      tags: [Curriculum]
+      summary: Get generation status
+      description: Get curriculum generation status.
+      operationId: getCurriculumStatus
+      responses:
+        '200':
+          description: Generation status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationJobResponse'
+
+  /curriculum:
+    get:
+      tags: [Curriculum]
+      summary: Get curriculum
+      description: Get current curriculum structure.
+      operationId: getCurriculum
+      responses:
+        '200':
+          description: Curriculum structure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurriculumResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number
+
+    PageSizeParam:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Items per page
+
+    SortParam:
+      name: sort
+      in: query
+      schema:
+        type: string
+      description: 'Sort field and direction (e.g., name:asc)'
+      example: createdAt:desc
+
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: User ID
+
+    WineIdParam:
+      name: wineId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Wine ID
+
+    ModuleIdParam:
+      name: moduleId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Module ID
+
+    LessonIdParam:
+      name: lessonId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Lesson ID
+
+    QuizIdParam:
+      name: quizId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Quiz ID
+
+    QuestionIdParam:
+      name: questionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Question ID
+
+    ScenarioIdParam:
+      name: scenarioId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Scenario ID
+
+    AttemptIdParam:
+      name: attemptId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Attempt ID
+
+    ImportIdParam:
+      name: importId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Import ID
+
+    StartDateParam:
+      name: startDate
+      in: query
+      schema:
+        type: string
+        format: date
+      description: Report start date
+
+    EndDateParam:
+      name: endDate
+      in: query
+      schema:
+        type: string
+        format: date
+      description: Report end date
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InvalidCredentials:
+      description: Invalid email or password
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InvalidToken:
+      description: Invalid or expired token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    AccountLocked:
+      description: Account is locked
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    FeatureNotAvailable:
+      description: Feature not available on subscription tier
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ============ Enums ============
+    UserRole:
+      type: string
+      enum: [LEARNER, MANAGER, ADMIN, OWNER, SYSTEM_ADMIN]
+
+    UserStatus:
+      type: string
+      enum: [ACTIVE, INVITED, SUSPENDED, DEACTIVATED]
+
+    CertificationLevel:
+      type: string
+      enum: [NONE, BRONZE, SILVER, GOLD]
+
+    ContentStatus:
+      type: string
+      enum: [DRAFT, REVIEW, APPROVED, PUBLISHED, ARCHIVED]
+
+    WineType:
+      type: string
+      enum: [red, white, rosé, sparkling, dessert, fortified]
+
+    PriceTier:
+      type: string
+      enum: [budget, moderate, premium, luxury]
+
+    Tier:
+      type: string
+      enum: [bronze, silver, gold]
+
+    QuestionType:
+      type: string
+      enum: [multiple_choice, multiple_select, true_false, matching]
+
+    Difficulty:
+      type: string
+      enum: [easy, medium, hard]
+
+    ScenarioCategory:
+      type: string
+      enum: [WINE_PAIRING, CUSTOMER_SERVICE, UPSELLING, DIETARY_ALLERGIES, WINE_FAULTS, SPECIAL_OCCASIONS]
+
+    ImportStatus:
+      type: string
+      enum: [UPLOADED, VALIDATING, VALIDATION_FAILED, AWAITING_CONFIRMATION, PROCESSING, COMPLETED, COMPLETED_WITH_ERRORS, FAILED, CANCELLED]
+
+    SubscriptionTier:
+      type: string
+      enum: [STARTER, PROFESSIONAL, ENTERPRISE]
+
+    # ============ Common ============
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId, timestamp]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+            requestId:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+
+    MessageResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+        totalItems:
+          type: integer
+
+    PaginationLinks:
+      type: object
+      properties:
+        self:
+          type: string
+        first:
+          type: string
+        prev:
+          type: string
+          nullable: true
+        next:
+          type: string
+          nullable: true
+        last:
+          type: string
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    # ============ Auth ============
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            expiresIn:
+              type: integer
+            tokenType:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    RefreshResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            expiresIn:
+              type: integer
+            tokenType:
+              type: string
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password, confirmPassword]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          format: password
+        confirmPassword:
+          type: string
+          format: password
+
+    # ============ Users ============
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        firstName:
+          type: string
+          nullable: true
+        lastName:
+          type: string
+          nullable: true
+        role:
+          $ref: '#/components/schemas/UserRole'
+        jobTitle:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        certificationLevel:
+          $ref: '#/components/schemas/CertificationLevel'
+        avatarUrl:
+          type: string
+          nullable: true
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+
+    UserListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+
+    CurrentUserResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: '#/components/schemas/User'
+            - type: object
+              properties:
+                organisation:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    name:
+                      type: string
+                    subscriptionTier:
+                      $ref: '#/components/schemas/SubscriptionTier'
+                preferences:
+                  type: object
+
+    CreateUserRequest:
+      type: object
+      required: [email, firstName, lastName, role]
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        jobTitle:
+          type: string
+        department:
+          type: string
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        jobTitle:
+          type: string
+        department:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    InviteUserRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+          default: LEARNER
+        jobTitle:
+          type: string
+        department:
+          type: string
+
+    ActivateUserRequest:
+      type: object
+      required: [invitationToken, password, confirmPassword]
+      properties:
+        invitationToken:
+          type: string
+        password:
+          type: string
+          format: password
+        confirmPassword:
+          type: string
+          format: password
+
+    # ============ Organisations ============
+    Organisation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+        subscriptionTier:
+          $ref: '#/components/schemas/SubscriptionTier'
+        subscriptionStatus:
+          type: string
+        status:
+          type: string
+        settings:
+          $ref: '#/components/schemas/OrganisationSettings'
+        branding:
+          $ref: '#/components/schemas/Branding'
+        userCount:
+          type: integer
+        maxUsers:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    OrganisationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Organisation'
+
+    UpdateOrganisationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        billingEmail:
+          type: string
+          format: email
+
+    OrganisationSettings:
+      type: object
+      properties:
+        features:
+          type: object
+          properties:
+            scenariosEnabled:
+              type: boolean
+            customContentEnabled:
+              type: boolean
+            apiAccessEnabled:
+              type: boolean
+        training:
+          type: object
+          properties:
+            requiredLevel:
+              $ref: '#/components/schemas/CertificationLevel'
+            deadlineDays:
+              type: integer
+            autoEnrollNewUsers:
+              type: boolean
+            mandatoryModules:
+              type: array
+              items:
+                type: string
+        notifications:
+          type: object
+          properties:
+            emailEnabled:
+              type: boolean
+            weeklyDigest:
+              type: boolean
+            progressReminders:
+              type: boolean
+            deadlineWarnings:
+              type: boolean
+
+    Branding:
+      type: object
+      properties:
+        logoUrl:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+
+    # ============ Wines ============
+    Wine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        producer:
+          type: string
+          nullable: true
+        vintage:
+          type: integer
+          nullable: true
+        region:
+          type: string
+        country:
+          type: string
+        wineType:
+          $ref: '#/components/schemas/WineType'
+        grapeVarieties:
+          type: array
+          items:
+            type: string
+        priceTier:
+          $ref: '#/components/schemas/PriceTier'
+        price:
+          type: number
+          nullable: true
+        tastingNotes:
+          type: string
+          nullable: true
+        foodPairings:
+          type: array
+          items:
+            type: string
+        servingTemperature:
+          type: string
+          nullable: true
+        decantingTime:
+          type: string
+          nullable: true
+        quickFacts:
+          type: object
+          nullable: true
+        detailedProfile:
+          type: object
+          nullable: true
+        expertInsights:
+          type: object
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+        version:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          $ref: '#/components/schemas/UserSummary'
+
+    WineResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Wine'
+
+    WineListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Wine'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+
+    CreateWineRequest:
+      type: object
+      required: [name, region, country, wineType, grapeVarieties, priceTier]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        producer:
+          type: string
+          maxLength: 255
+        vintage:
+          type: integer
+          minimum: 1900
+        region:
+          type: string
+          minLength: 1
+          maxLength: 100
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+        wineType:
+          $ref: '#/components/schemas/WineType'
+        grapeVarieties:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+        priceTier:
+          $ref: '#/components/schemas/PriceTier'
+        price:
+          type: number
+          minimum: 0
+        tastingNotes:
+          type: string
+          maxLength: 2000
+        foodPairings:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+        servingTemperature:
+          type: string
+        decantingTime:
+          type: string
+
+    UpdateWineRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        producer:
+          type: string
+        vintage:
+          type: integer
+        region:
+          type: string
+        country:
+          type: string
+        wineType:
+          $ref: '#/components/schemas/WineType'
+        grapeVarieties:
+          type: array
+          items:
+            type: string
+        priceTier:
+          $ref: '#/components/schemas/PriceTier'
+        price:
+          type: number
+        tastingNotes:
+          type: string
+        foodPairings:
+          type: array
+          items:
+            type: string
+        servingTemperature:
+          type: string
+        decantingTime:
+          type: string
+        quickFacts:
+          type: object
+        detailedProfile:
+          type: object
+        expertInsights:
+          type: object
+
+    # ============ Modules ============
+    Module:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        tier:
+          $ref: '#/components/schemas/Tier'
+        sortOrder:
+          type: integer
+        estimatedMinutes:
+          type: integer
+        lessonCount:
+          type: integer
+        imageUrl:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ModuleResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Module'
+
+    ModuleDetailResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Module'
+            - type: object
+              properties:
+                lessons:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/LessonSummary'
+                quiz:
+                  $ref: '#/components/schemas/QuizSummary'
+                progress:
+                  type: object
+                  properties:
+                    completed:
+                      type: boolean
+                    completedLessons:
+                      type: integer
+                    totalLessons:
+                      type: integer
+                    percentComplete:
+                      type: integer
+
+    ModuleListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+
+    CreateModuleRequest:
+      type: object
+      required: [title, description, category, tier]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        tier:
+          $ref: '#/components/schemas/Tier'
+        imageUrl:
+          type: string
+
+    UpdateModuleRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        tier:
+          $ref: '#/components/schemas/Tier'
+        imageUrl:
+          type: string
+
+    # ============ Lessons ============
+    Lesson:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        moduleId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        sortOrder:
+          type: integer
+        estimatedMinutes:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LessonSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        sortOrder:
+          type: integer
+        estimatedMinutes:
+          type: integer
+        completed:
+          type: boolean
+
+    LessonResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Lesson'
+
+    LessonListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lesson'
+
+    CreateLessonRequest:
+      type: object
+      required: [title, content, estimatedMinutes]
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        estimatedMinutes:
+          type: integer
+
+    UpdateLessonRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        estimatedMinutes:
+          type: integer
+
+    LessonCompletionResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            lessonId:
+              type: string
+              format: uuid
+            completed:
+              type: boolean
+            completedAt:
+              type: string
+              format: date-time
+            moduleProgress:
+              type: object
+              properties:
+                moduleId:
+                  type: string
+                  format: uuid
+                completedLessons:
+                  type: integer
+                totalLessons:
+                  type: integer
+                percentComplete:
+                  type: integer
+                moduleCompleted:
+                  type: boolean
+
+    # ============ Quizzes ============
+    Quiz:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tier:
+          $ref: '#/components/schemas/Tier'
+        category:
+          type: string
+        passingScore:
+          type: integer
+        timeLimit:
+          type: integer
+          nullable: true
+        questionCount:
+          type: integer
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+        moduleId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    QuizSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        tier:
+          $ref: '#/components/schemas/Tier'
+        passingScore:
+          type: integer
+        questionCount:
+          type: integer
+
+    QuizResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Quiz'
+            - type: object
+              properties:
+                unlocked:
+                  type: boolean
+                userProgress:
+                  type: object
+                  properties:
+                    bestScore:
+                      type: integer
+                      nullable: true
+                    passed:
+                      type: boolean
+                    attemptCount:
+                      type: integer
+                    lastAttemptAt:
+                      type: string
+                      format: date-time
+                      nullable: true
+
+    QuizListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Quiz'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+
+    QuizPreviewResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Quiz'
+            - type: object
+              properties:
+                questions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/QuestionWithAnswers'
+
+    CreateQuizRequest:
+      type: object
+      required: [title, tier, category, passingScore]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        tier:
+          $ref: '#/components/schemas/Tier'
+        category:
+          type: string
+        passingScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        timeLimit:
+          type: integer
+        moduleId:
+          type: string
+          format: uuid
+
+    UpdateQuizRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        tier:
+          $ref: '#/components/schemas/Tier'
+        category:
+          type: string
+        passingScore:
+          type: integer
+        timeLimit:
+          type: integer
+
+    # ============ Questions ============
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        quizId:
+          type: string
+          format: uuid
+        question:
+          type: string
+        questionType:
+          $ref: '#/components/schemas/QuestionType'
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        sortOrder:
+          type: integer
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/Option'
+
+    QuestionWithAnswers:
+      allOf:
+        - $ref: '#/components/schemas/Question'
+        - type: object
+          properties:
+            explanation:
+              type: string
+            options:
+              type: array
+              items:
+                $ref: '#/components/schemas/OptionWithAnswer'
+
+    QuestionResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/QuestionWithAnswers'
+
+    Option:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        sortOrder:
+          type: integer
+
+    OptionWithAnswer:
+      allOf:
+        - $ref: '#/components/schemas/Option'
+        - type: object
+          properties:
+            isCorrect:
+              type: boolean
+
+    CreateQuestionRequest:
+      type: object
+      required: [question, questionType, options]
+      properties:
+        question:
+          type: string
+        questionType:
+          $ref: '#/components/schemas/QuestionType'
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        explanation:
+          type: string
+        options:
+          type: array
+          items:
+            type: object
+            required: [text, isCorrect]
+            properties:
+              text:
+                type: string
+              isCorrect:
+                type: boolean
+
+    UpdateQuestionRequest:
+      type: object
+      properties:
+        question:
+          type: string
+        questionType:
+          $ref: '#/components/schemas/QuestionType'
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        explanation:
+          type: string
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              text:
+                type: string
+              isCorrect:
+                type: boolean
+
+    # ============ Quiz Attempts ============
+    QuizAttemptResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            attemptId:
+              type: string
+              format: uuid
+            quizId:
+              type: string
+              format: uuid
+            startedAt:
+              type: string
+              format: date-time
+            expiresAt:
+              type: string
+              format: date-time
+            timeLimit:
+              type: integer
+            questions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Question'
+
+    SubmitQuizRequest:
+      type: object
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            required: [questionId, selectedOptions]
+            properties:
+              questionId:
+                type: string
+                format: uuid
+              selectedOptions:
+                type: array
+                items:
+                  type: string
+
+    QuizResultResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            attemptId:
+              type: string
+              format: uuid
+            quizId:
+              type: string
+              format: uuid
+            score:
+              type: integer
+            passingScore:
+              type: integer
+            passed:
+              type: boolean
+            correctCount:
+              type: integer
+            totalQuestions:
+              type: integer
+            timeSpent:
+              type: integer
+            completedAt:
+              type: string
+              format: date-time
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  questionId:
+                    type: string
+                    format: uuid
+                  correct:
+                    type: boolean
+                  selectedOptions:
+                    type: array
+                    items:
+                      type: string
+                  correctOptions:
+                    type: array
+                    items:
+                      type: string
+                  explanation:
+                    type: string
+            certificateEarned:
+              $ref: '#/components/schemas/Certification'
+            nextQuiz:
+              $ref: '#/components/schemas/QuizSummary'
+
+    # ============ Scenarios ============
+    Scenario:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/ScenarioCategory'
+        difficulty:
+          $ref: '#/components/schemas/Tier'
+        estimatedTime:
+          type: integer
+        customerName:
+          type: string
+        customerPersona:
+          type: string
+        situation:
+          type: string
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ScenarioResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Scenario'
+            - type: object
+              properties:
+                wines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      talkingPoints:
+                        type: array
+                        items:
+                          type: string
+                userProgress:
+                  type: object
+                  properties:
+                    bestScore:
+                      type: integer
+                      nullable: true
+                    passed:
+                      type: boolean
+                    attemptCount:
+                      type: integer
+
+    ScenarioListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scenario'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+
+    ScenarioPreviewResponse:
+      type: object
+      properties:
+        data:
+          allOf:
+            - $ref: '#/components/schemas/Scenario'
+            - type: object
+              properties:
+                steps:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ScenarioStep'
+
+    ScenarioStep:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        stepOrder:
+          type: integer
+        stepType:
+          type: string
+          enum: [DIALOGUE, ACTION, OBSERVATION, CONCLUSION]
+        customerText:
+          type: string
+        customerMood:
+          type: string
+          nullable: true
+        context:
+          type: string
+          nullable: true
+        hint:
+          type: string
+          nullable: true
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScenarioChoice'
+
+    ScenarioChoice:
+      type: object
+      properties:
+        id:
+          type: string
+        choiceText:
+          type: string
+        isOptimal:
+          type: boolean
+        points:
+          type: integer
+        feedback:
+          type: string
+        customerReaction:
+          type: string
+          nullable: true
+        nextStepId:
+          type: string
+          format: uuid
+          nullable: true
+        sortOrder:
+          type: integer
+
+    CreateScenarioRequest:
+      type: object
+      required: [title, description, category, difficulty, customerName, customerPersona, situation]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/ScenarioCategory'
+        difficulty:
+          $ref: '#/components/schemas/Tier'
+        estimatedTime:
+          type: integer
+        customerName:
+          type: string
+        customerPersona:
+          type: string
+        situation:
+          type: string
+
+    UpdateScenarioRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          $ref: '#/components/schemas/ScenarioCategory'
+        difficulty:
+          $ref: '#/components/schemas/Tier'
+        estimatedTime:
+          type: integer
+        customerName:
+          type: string
+        customerPersona:
+          type: string
+        situation:
+          type: string
+
+    ScenarioAttemptResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            attemptId:
+              type: string
+              format: uuid
+            scenarioId:
+              type: string
+              format: uuid
+            startedAt:
+              type: string
+              format: date-time
+            currentStep:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                stepOrder:
+                  type: integer
+                stepType:
+                  type: string
+                customerText:
+                  type: string
+                customerMood:
+                  type: string
+                choices:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      choiceText:
+                        type: string
+                      sortOrder:
+                        type: integer
+
+    ScenarioChoiceResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            attemptId:
+              type: string
+              format: uuid
+            choiceMade:
+              type: object
+              properties:
+                id:
+                  type: string
+                choiceText:
+                  type: string
+                isOptimal:
+                  type: boolean
+                points:
+                  type: integer
+                feedback:
+                  type: string
+            customerReaction:
+              type: string
+            currentScore:
+              type: integer
+            maxPossibleScore:
+              type: integer
+            isComplete:
+              type: boolean
+            nextStep:
+              type: object
+              nullable: true
+            finalScore:
+              type: integer
+            passed:
+              type: boolean
+
+    # ============ Progress ============
+    ProgressResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            userId:
+              type: string
+              format: uuid
+            certificationLevel:
+              $ref: '#/components/schemas/CertificationLevel'
+            overallProgress:
+              type: object
+              properties:
+                modulesCompleted:
+                  type: integer
+                totalModules:
+                  type: integer
+                lessonsCompleted:
+                  type: integer
+                totalLessons:
+                  type: integer
+                quizzesPassed:
+                  type: integer
+                totalQuizzes:
+                  type: integer
+                scenariosPassed:
+                  type: integer
+                totalScenarios:
+                  type: integer
+                percentComplete:
+                  type: integer
+            tierProgress:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  modulesCompleted:
+                    type: integer
+                  totalModules:
+                    type: integer
+                  quizzesPassed:
+                    type: integer
+                  totalQuizzes:
+                    type: integer
+                  percentComplete:
+                    type: integer
+                  certified:
+                    type: boolean
+                  certifiedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  unlocked:
+                    type: boolean
+            recentActivity:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  contentId:
+                    type: string
+                    format: uuid
+                  contentTitle:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+    ProgressSummaryResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            certificationLevel:
+              $ref: '#/components/schemas/CertificationLevel'
+            percentComplete:
+              type: integer
+            streak:
+              type: integer
+            totalTimeSpent:
+              type: integer
+            nextMilestone:
+              type: object
+              properties:
+                type:
+                  type: string
+                progress:
+                  type: integer
+                remaining:
+                  type: string
+            weeklyGoal:
+              type: object
+              properties:
+                target:
+                  type: integer
+                current:
+                  type: integer
+                percentComplete:
+                  type: integer
+
+    Certification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        level:
+          $ref: '#/components/schemas/CertificationLevel'
+        title:
+          type: string
+        description:
+          type: string
+        earnedAt:
+          type: string
+          format: date-time
+        certificateNumber:
+          type: string
+        certificateUrl:
+          type: string
+
+    CertificationListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certification'
+
+    # ============ Imports ============
+    Import:
+      type: object
+      properties:
+        importId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ImportStatus'
+        fileName:
+          type: string
+        fileSize:
+          type: integer
+        rowCount:
+          type: integer
+        validRows:
+          type: integer
+        errorRows:
+          type: integer
+        duplicateRows:
+          type: integer
+        imported:
+          type: integer
+        skipped:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        validatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ImportResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/Import'
+
+    ImportListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Import'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+
+    ImportPreviewResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            importId:
+              type: string
+              format: uuid
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  rowNumber:
+                    type: integer
+                  status:
+                    type: string
+                    enum: [valid, error, duplicate]
+                  wine:
+                    type: object
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        message:
+                          type: string
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    ImportErrorsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            importId:
+              type: string
+              format: uuid
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  rowNumber:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        message:
+                          type: string
+            totalErrors:
+              type: integer
+
+    # ============ Reports ============
+    IndividualReportResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            userId:
+              type: string
+              format: uuid
+            userName:
+              type: string
+            period:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
+            summary:
+              type: object
+              properties:
+                lessonsCompleted:
+                  type: integer
+                quizzesAttempted:
+                  type: integer
+                quizzesPassed:
+                  type: integer
+                averageQuizScore:
+                  type: integer
+                scenariosCompleted:
+                  type: integer
+                averageScenarioScore:
+                  type: integer
+                totalTimeSpent:
+                  type: integer
+                certificationLevel:
+                  $ref: '#/components/schemas/CertificationLevel'
+            moduleProgress:
+              type: array
+              items:
+                type: object
+            quizResults:
+              type: array
+              items:
+                type: object
+            strengths:
+              type: array
+              items:
+                type: string
+            areasForImprovement:
+              type: array
+              items:
+                type: string
+
+    TeamReportResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            period:
+              type: object
+              properties:
+                startDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
+            summary:
+              type: object
+              properties:
+                totalUsers:
+                  type: integer
+                activeUsers:
+                  type: integer
+                certifiedBronze:
+                  type: integer
+                certifiedSilver:
+                  type: integer
+                certifiedGold:
+                  type: integer
+                averageProgress:
+                  type: integer
+                averageQuizScore:
+                  type: integer
+            topPerformers:
+              type: array
+              items:
+                type: object
+            atRiskLearners:
+              type: array
+              items:
+                type: object
+            progressByDepartment:
+              type: array
+              items:
+                type: object
+
+    OrganisationReportResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            period:
+              type: object
+            summary:
+              type: object
+            certificationDistribution:
+              type: object
+            contentUsage:
+              type: object
+            trends:
+              type: object
+
+    ContentReportResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            summary:
+              type: object
+            contentByStatus:
+              type: object
+            contentGaps:
+              type: object
+            quizPerformance:
+              type: array
+              items:
+                type: object
+            questionPerformance:
+              type: object
+
+    ExportReportRequest:
+      type: object
+      required: [reportType, format]
+      properties:
+        reportType:
+          type: string
+          enum: [individual, team, organisation, content]
+        format:
+          type: string
+          enum: [csv, pdf]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        filters:
+          type: object
+
+    ExportReportResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            exportId:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [PROCESSING, COMPLETED, FAILED]
+            downloadUrl:
+              type: string
+              nullable: true
+            expiresAt:
+              type: string
+              format: date-time
+              nullable: true
+            estimatedTime:
+              type: integer
+              nullable: true
+
+    # ============ Curriculum ============
+    GenerateCurriculumRequest:
+      type: object
+      properties:
+        options:
+          type: object
+          properties:
+            includeQuizzes:
+              type: boolean
+              default: true
+            includeScenarios:
+              type: boolean
+              default: true
+            targetTiers:
+              type: array
+              items:
+                $ref: '#/components/schemas/Tier'
+
+    GenerationJobResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            jobId:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [PENDING, PROCESSING, COMPLETED, FAILED]
+            progress:
+              type: integer
+            currentStep:
+              type: string
+              nullable: true
+            steps:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, in_progress, completed, failed]
+            startedAt:
+              type: string
+              format: date-time
+              nullable: true
+            estimatedCompletion:
+              type: string
+              format: date-time
+              nullable: true
+            completedAt:
+              type: string
+              format: date-time
+              nullable: true
+            error:
+              type: string
+              nullable: true
+
+    CurriculumResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            version:
+              type: integer
+            generatedAt:
+              type: string
+              format: date-time
+            stats:
+              type: object
+              properties:
+                wineCount:
+                  type: integer
+                moduleCount:
+                  type: integer
+                lessonCount:
+                  type: integer
+                quizCount:
+                  type: integer
+                scenarioCount:
+                  type: integer
+            paths:
+              type: array
+              items:
+                type: object
+                properties:
+                  tier:
+                    $ref: '#/components/schemas/Tier'
+                  title:
+                    type: string
+                  modules:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        title:
+                          type: string
+                        order:
+                          type: integer
+                  estimatedTime:
+                    type: integer
+                  prerequisite:
+                    $ref: '#/components/schemas/Tier'
+                  quizId:
+                    type: string
